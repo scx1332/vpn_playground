@@ -8,3 +8,5 @@ services:
     command: ./run_vpn_server.sh
     cap_add:
       - NET_ADMIN
+    ports:
+      - "45918:45918"
