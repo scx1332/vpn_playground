@@ -2,8 +2,8 @@
 echo "Starting VPN client"
 cd novpn-c
 sleep 3
-vpn_server_ip=$(dig +short vpn_server)
-vpn_server_port=45918
+vpn_server_ip=`dig +short ${VPN_SERVER_HOST:-vpn_server}`
+vpn_server_port=${VPN_SERVER_PORT:-45918}
 vpn_client_id=${VPN_CLIENT_ID:-0}
 echo "Connecting to VPN server IP: $vpn_server_ip and port: $vpn_server_port with id: $vpn_client_id"
 ./novpn client ${vpn_server_ip} ${vpn_server_port} ${vpn_client_id}&
