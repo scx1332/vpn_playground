@@ -1,11 +1,10 @@
 version: '2.4'
 
 services:
-  vpn:
-    network_mode: none
+  vpn_server:
     build:
       dockerfile: Dockerfile
       context: .
-    command: ./run_vpn_client.sh
+    command: ./run_vpn_server.sh
     cap_add:
       - NET_ADMIN
