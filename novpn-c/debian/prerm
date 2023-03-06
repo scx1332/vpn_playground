@@ -1,0 +1,6 @@
+
+systemctl stop novpn-client
+systemctl disable novpn-client
+
+
+

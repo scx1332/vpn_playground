@@ -1,0 +1,18 @@
+[Unit]
+Description=novpn client
+After=network.target
+
+[Service]
+User=nobody
+ExecStart=/usr/sbin/novpn client
+AmbientCapabilities=CAP_NET_ADMIN
+
+StandardOutput=syslog+console
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+
+
+
