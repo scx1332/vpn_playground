@@ -122,6 +122,7 @@ static int novpn_server(uint16_t port, uint32_t net, uint32_t mask) {
     perror("bind server");
     return -1;
   }
+  fprintf(stderr, "server started on addr %d", port);
   uint64_t clients[256];
   struct sockaddr_in client_addr[256];
   memset(clients, 0, sizeof(clients));
@@ -137,6 +138,7 @@ static int novpn_server(uint16_t port, uint32_t net, uint32_t mask) {
       close(fd);
       return -1;
     }
+    fprintf(stderr, "recv %d bytes");
     mt_all *p = (mt_all *)buffer;
     // reply to ping
     if (p->op == MT_NOOP) {
@@ -400,8 +402,8 @@ int main(int argc, const char *argv[]) {
 
   if (argc > 1) {
     if (strcmp(argv[1], "client") == 0) {
-      const char *server_addr = "34.244.251.180";
-      int port = 11443;
+      const char *server_addr = "145.239.69.80";
+      int port = 45918;
       if (argc>2) {
         server_addr = argv[2];
       }
@@ -411,7 +413,7 @@ int main(int argc, const char *argv[]) {
       return novpn_client(server_addr, port);
     }
     if (strcmp(argv[1], "server") == 0) {
-      int port = 11443;
+      int port = 45918;
       if (argc>2) {
         port = atoi(argv[2]);
       }
