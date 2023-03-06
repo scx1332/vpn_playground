@@ -105,8 +105,10 @@ static uint8_t alloc_client(uint64_t clients[], uint64_t id) {
   return idx;
 }
 
+
+
 static int novpn_server(uint16_t port, uint32_t net, uint32_t mask) {
- 
+ fprintf(stderr, "server starting on addr %d\n", port);
   // udp
   int fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (fd < 0) {
@@ -122,7 +124,7 @@ static int novpn_server(uint16_t port, uint32_t net, uint32_t mask) {
     perror("bind server");
     return -1;
   }
-  fprintf(stderr, "server started on addr %d", port);
+  fprintf(stderr, "server started on addr %d\n", port);
   uint64_t clients[256];
   struct sockaddr_in client_addr[256];
   memset(clients, 0, sizeof(clients));
@@ -142,10 +144,12 @@ static int novpn_server(uint16_t port, uint32_t net, uint32_t mask) {
     mt_all *p = (mt_all *)buffer;
     // reply to ping
     if (p->op == MT_NOOP) {
+    fprintf(stderr, "replying ping\n");
       sendto(fd, buffer, n, 0, (struct sockaddr *)&cli_addr, len);
       continue;
     }
     if (p->op == MT_INIT) {
+    fprintf(stderr, "mt init\n");
       uint64_t id = p->init.id;
       uint8_t idx = alloc_client(clients, id);
       clients[idx] = id;
@@ -155,6 +159,7 @@ static int novpn_server(uint16_t port, uint32_t net, uint32_t mask) {
       continue;
     }
     if (p->op == MT_KEEP) {
+    fprintf(stderr, "mt keep\n");
         uint8_t idx = p->keep.addr & 0xff;
         uint64_t id = p->keep.id;
         if (clients[idx] == 0) {
@@ -175,6 +180,7 @@ static int novpn_server(uint16_t port, uint32_t net, uint32_t mask) {
         }
     }
     if (p->op == MT_FORWARD) {
+    fprintf(stderr, "mt forward\n");
         struct iphdr *ip = (struct iphdr *)p->forward.bytes;
         if (ip->version != 4) {
           debug_print("reject no ipv4\n");
@@ -183,10 +189,11 @@ static int novpn_server(uint16_t port, uint32_t net, uint32_t mask) {
         uint32_t daddr = ntohl(ip->daddr);
         fprintf(stderr, "smok\n");
         if ((daddr & mask) != net) {
-          debug_print("reject invalid dest: %0x (%04ux/%04x) \n", daddr, net, daddr & mask);
+          fprintf(stderr, "reject invalid dest: %0x %0x (%04ux/%04x) \n", ip->daddr, daddr, net, daddr & mask);
           continue;
         }
         uint32_t idx = daddr & 0xff;
+        fprintf(stderr, "valid dest: %0x (%04ux/%04x) \n", daddr, net, daddr & mask);
         if (clients[idx] == 0) {
           debug_print("reject client not found for: %d\n", idx);
           continue;
@@ -208,8 +215,11 @@ static uint64_t genid() {
   return hash_str(buffer, sizeof(buffer));
 }
 
-static int novpn_client(const char *addr, uint16_t port) {
-  uint64_t id = genid();
+static int novpn_client(const char *addr, uint16_t port, uint64_t id) {
+  if (id == 0) {
+    fprintf(stderr, "id not set generating id\n");
+    id = genid();
+  }
   in_addr_t server_addr = inet_addr(addr);
 
   if (server_addr == ((in_addr_t)(-1))) {
@@ -262,7 +272,7 @@ static int novpn_client(const char *addr, uint16_t port) {
       //  strcpy(tun_name, "novpn");
       tun_fd = tun_alloc(req.ifr_name, IFF_TUN | IFF_NO_PI);
       if (tun_fd < 0) {
-        fprintf(stderr, "unable to alocate network interface\n");
+        fprintf(stderr, "unable to alocate network interface %d\n", tun_fd);
         return -1;
       }
       memset(&req.ifr_addr, 0, sizeof(req.ifr_addr));
@@ -316,12 +326,14 @@ static int novpn_client(const char *addr, uint16_t port) {
   if (tun_fd >= maxfd) {
     maxfd = tun_fd+1;
   }
+  fprintf(stderr, "Entering vpn loop\n");
 
   for (;;) {
     FD_SET(fd, &rs);
     FD_SET(tun_fd, &rs);
     struct timeval tv = { 10, 0 };
     int sn = select(maxfd, &rs, NULL, NULL, &tv);
+    fprintf(stderr, "Select returned with %d\n", sn);
     if (sn == -1) {
       perror("select");
       return -1;
@@ -381,6 +393,7 @@ static int tun_alloc(char *dev, int flags) {
   char *clonedev = "/dev/net/tun";
 
   if( (fd = open(clonedev, O_RDWR)) < 0 ) {
+        fprintf(stderr, "open %s failed %d\n", clonedev, fd);
      return fd;
   }
 
@@ -390,6 +403,7 @@ static int tun_alloc(char *dev, int flags) {
     strncpy(ifr.ifr_name, dev, IFNAMSIZ);
   }
   if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ) {
+        fprintf(stderr, "ioctl failed %d\n", err);
     close(fd);
     return err;
   }
@@ -404,13 +418,19 @@ int main(int argc, const char *argv[]) {
     if (strcmp(argv[1], "client") == 0) {
       const char *server_addr = "145.239.69.80";
       int port = 45918;
+      uint64_t id = 0;
       if (argc>2) {
         server_addr = argv[2];
       }
       if (argc>3) {
         port = atoi(argv[3]);
       }
-      return novpn_client(server_addr, port);
+        if (argc>4) {
+            id = atoi(argv[4]);
+        }
+
+
+      return novpn_client(server_addr, port, id);
     }
     if (strcmp(argv[1], "server") == 0) {
       int port = 45918;

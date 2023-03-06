@@ -1,19 +1,34 @@
 version: '2.4'
 
 services:
-  vpn_client:
-    build:
-      dockerfile: Dockerfile
-      context: .
-    command: ./run_vpn_client.sh
-    cap_add:
-      - NET_ADMIN
   vpn_server:
     build:
       dockerfile: Dockerfile
       context: .
     command: ./run_vpn_server.sh
+  vpn_prov:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    command: ./run_vpn_prov.sh
     cap_add:
       - NET_ADMIN
-    ports:
-      - "45918:45918"
+    environment:
+      - VPN_CLIENT_ID=3445
+      - VPN_IP=192.168.255.120
+      - VPN_REQ_IP=192.168.255.121
+  vpn_req:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    command: ./run_vpn_req.sh
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_CLIENT_ID=3444
+      - VPN_IP=192.168.255.121
+      - VPN_PROV_IP=192.168.255.120
